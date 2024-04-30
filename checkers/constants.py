@@ -10,15 +10,14 @@ X_SIZE = Y_SIZE = 8
 # Размер ячейки (в пикселях)
 CELL_SIZE = 75
 
-#Размер кнопки меню
-BUTTON_WIDTH = 100
-BUTTON_HEIGHT = 40
+# Цвет фона меню
+MENU_COLOR = "#BC987E"
 
 # Скорость анимации (больше = быстрее)
 ANIMATION_SPEED = 6
 
 # Количество ходов для предсказания (Максимум: 4)
-NUM_MOVE_PREDICTION = 4
+NUM_MOVE_PREDICTION = 3
 
 # Ширина рамки (Желательно должна быть чётной)
 BORDER_WIDTH = 2 * 2
@@ -31,8 +30,6 @@ HOVER_BORDER_COLOR = '#54b346'
 SELECT_BORDER_COLOR = '#944444'
 # Цвет кружков возможных ходов
 POSIBLE_MOVE_CIRCLE_COLOR = '#944444'
-# Цвет фона меню
-MENU_COLOR = "#000000"
 
 # Возможные смещения ходов шашек
 MOVE_OFFSETS = [
