@@ -10,6 +10,10 @@ X_SIZE = Y_SIZE = 8
 # Размер ячейки (в пикселях)
 CELL_SIZE = 75
 
+#Размер кнопки меню
+BUTTON_WIDTH = 100
+BUTTON_HEIGHT = 40
+
 # Скорость анимации (больше = быстрее)
 ANIMATION_SPEED = 6
 
