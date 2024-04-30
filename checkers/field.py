@@ -1,29 +1,8 @@
 from checkers.enums import CheckerType
 from checkers.checker import Checker
+from checkers.constants import WHITE_CHECKERS, BLACK_CHECKERS
+from checkers.point import Point
 from functools import reduce
-
-WHITE_CHECKERS = [CheckerType.WHITE_REGULAR, CheckerType.WHITE_QUEEN]
-BLACK_CHECKERS = [CheckerType.BLACK_REGULAR, CheckerType.BLACK_QUEEN]
-
-class Point:
-    '''Отслеживание точки взаимодействия'''
-    
-    def __init__(self, x: int = -1, y: int = -1):
-        self.__x = x
-        self.__y = y
-
-    @property
-    def x(self):
-        return self.__x
-
-    @property
-    def y(self):
-        return self.__y
-
-    def __eq__(self, other):
-        if isinstance(other, Point):
-            return (self.x == other.x and self.y == other.y)
-        return NotImplemented
 
 class Field:
     def __init__(self, x_size: int, y_size: int):
