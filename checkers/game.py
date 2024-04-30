@@ -1,7 +1,9 @@
-from tkinter import Canvas, Event
+from tkinter import Canvas, Event, messagebox
 from PIL import Image, ImageTk
+from random import choice
 from pathlib import Path
 from time import sleep
+from math import inf
 
 from checkers.field import Field
 from checkers.move import Move
@@ -22,6 +24,9 @@ class Game:
         self.__init_images()
         
         self.__draw_game_pitch()
+
+        if (PLAYER_SIDE == SideType.BLACK):
+            self.__handle_enemy_turn()
 
     def __init_images(self):
         '''Инициализация изображений'''
@@ -71,6 +76,13 @@ class Game:
                 elif (x == self.__hovered_cell.x and y == self.__hovered_cell.y):
                     self.__canvas.create_rectangle(x * CELL_SIZE + BORDER_WIDTH // 2, y * CELL_SIZE + BORDER_WIDTH // 2, x * CELL_SIZE + CELL_SIZE - BORDER_WIDTH // 2, y * CELL_SIZE + CELL_SIZE - BORDER_WIDTH // 2, outline=HOVER_BORDER_COLOR,  width=BORDER_WIDTH, tag='border')
 
+                # Отрисовка возможных точек перемещения, если есть выбранная ячейка
+                if (self.__selected_cell):
+                    player_moves_list = self.__get_moves_list(PLAYER_SIDE)
+                    for move in player_moves_list:
+                        if (self.__selected_cell.x == move.from_x and self.__selected_cell.y == move.from_y):
+                            self.__canvas.create_oval(move.to_x * CELL_SIZE + CELL_SIZE / 3, move.to_y * CELL_SIZE + CELL_SIZE / 3, move.to_x * CELL_SIZE + (CELL_SIZE - CELL_SIZE / 3), move.to_y * CELL_SIZE + (CELL_SIZE - CELL_SIZE / 3), fill=POSIBLE_MOVE_CIRCLE_COLOR, width=0, tag='posible_move_circle' )
+
     def __draw_checkers(self):
         '''Отрисовка шашек'''
         for y in range(self.__field.y_size):
@@ -84,6 +96,10 @@ class Game:
         x, y = (event.x) // CELL_SIZE, (event.y) // CELL_SIZE
         if (x != self.__hovered_cell.x or y != self.__hovered_cell.y):
             self.__hovered_cell = Point(x, y)
+
+            # Если ход игрока, то перерисовать
+            if (self.__player_turn):
+                self.__draw_game_pitch()
 
     def mouse_down(self, event: Event):
         '''Событие нажатия мышки'''
@@ -109,6 +125,14 @@ class Game:
             self.__draw_game_pitch()
         elif (self.__player_turn):
             move = Move(self.__selected_cell.x, self.__selected_cell.y, x, y)
+
+            # Если нажатие по ячейке, на которую можно походить
+            if (move in self.__get_moves_list(PLAYER_SIDE)):
+                self.__handle_player_turn(move)
+
+                # Если не ход игрока, то ход противника
+                if not (self.__player_turn):
+                    self.__handle_enemy_turn()
 
     def __make_move(self, move: Move, draw: bool = True):
         '''Совершение хода'''
@@ -143,3 +167,225 @@ class Game:
             self.__draw_game_pitch()
 
         return has_killed_checker
+
+    def __handle_player_turn(self, move: Move):
+        '''Обработка хода игрока'''
+        self.__player_turn = False
+
+        # Была ли убита шашка
+        has_killed_checker = self.__make_move(move)
+
+        required_moves_list = list(filter(lambda required_move: move.to_x == required_move.from_x and move.to_y == required_move.from_y, self.__get_required_moves_list(PLAYER_SIDE)))
+        
+        # Если есть ещё ход этой же шашкой
+        if (has_killed_checker and required_moves_list):
+            self.__player_turn = True
+
+        self.__selected_cell = Point()
+
+    def __handle_enemy_turn(self):
+        '''Обработка хода противника (компьютера)'''
+        self.__player_turn = False
+
+        optimal_moves_list = self.__predict_optimal_moves(SideType.opposite(PLAYER_SIDE))
+
+        for move in optimal_moves_list:
+            self.__make_move(move)
+            
+        self.__player_turn = True
+        
+        self.__check_for_game_over()
+
+    def __check_for_game_over(self):
+        '''Проверка на конец игры'''
+        game_over = False
+
+        white_moves_list = self.__get_moves_list(SideType.WHITE)
+        if not (white_moves_list):
+            # Белые проиграли
+            answer = messagebox.showinfo('Конец игры', 'Чёрные выиграли')
+            game_over = True
+
+        black_moves_list = self.__get_moves_list(SideType.BLACK)
+        if not (black_moves_list):
+            # Чёрные проиграли
+            answer = messagebox.showinfo('Конец игры', 'Белые выиграли')
+            game_over = True
+        
+        if (game_over):
+            # Новая игра
+            self.__init__(self.__canvas, self.__field.x_size, self.__field.y_size)
+
+    def __predict_optimal_moves(self, side: SideType) -> list[Move]:
+        '''Предсказать оптимальный ход'''
+        best_result = 0
+        optimal_moves = []
+        predicted_moves_list = self.__get_predicted_moves_list(side)
+
+        if (predicted_moves_list):
+            field_copy = Field.copy(self.__field)
+            for moves in predicted_moves_list:
+                for move in moves:
+                    self.__make_move(move, draw = False)
+
+                try:
+                    if (side == SideType.WHITE):
+                        result = self.__field.white_score / self.__field.black_score
+                    elif (side == SideType.BLACK):
+                        result = self.__field.black_score / self.__field.white_score
+                except ZeroDivisionError:
+                        result = inf
+                
+                if (result > best_result):
+                    best_result = result
+                    optimal_moves.clear()
+                    optimal_moves.append(moves)
+                elif (result == best_result):
+                    optimal_moves.append(moves)
+
+                self.__field = Field.copy(field_copy)
+
+        optimal_move = []
+        if (optimal_moves):
+            # Фильтрация хода
+            for move in choice(optimal_moves):
+                if   (side == SideType.WHITE and self.__field.receiving_type_checker(move.from_x, move.from_y) in BLACK_CHECKERS): 
+                    break
+                elif (side == SideType.BLACK and self.__field.receiving_type_checker(move.from_x, move.from_y) in WHITE_CHECKERS): 
+                    break
+
+                optimal_move.append(move)
+
+        return optimal_move
+
+    def __get_predicted_moves_list(self, side: SideType, current_prediction_depth: int = 0, all_moves_list: list[Move] = [], current_moves_list: list[Move] = [], required_moves_list: list[Move] = []) -> list[Move]:
+        '''Предсказать все возможные ходы'''
+
+        if (current_moves_list):
+            all_moves_list.append(current_moves_list)
+        else:
+            all_moves_list.clear()
+
+        if (required_moves_list):
+            moves_list = required_moves_list
+        else:
+            moves_list = self.__get_moves_list(side)
+
+        if (moves_list and current_prediction_depth < NUM_MOVE_PREDICTION):
+            field_copy = Field.copy(self.__field)
+            for move in moves_list:
+                has_killed_checker = self.__make_move(move, draw = False)
+
+                required_moves_list = list(filter(lambda required_move: move.to_x == required_move.from_x and move.to_y == required_move.from_y, self.__get_required_moves_list(side)))
+
+                # Если есть ещё ход этой же шашкой
+                if (has_killed_checker and required_moves_list):
+                    self.__get_predicted_moves_list(side, current_prediction_depth, all_moves_list, current_moves_list + [move], required_moves_list)
+                else:
+                    self.__get_predicted_moves_list(SideType.opposite(side), current_prediction_depth + 1, all_moves_list, current_moves_list + [move])
+
+                self.__field = Field.copy(field_copy)
+
+        return all_moves_list
+
+    def __get_moves_list(self, side: SideType) -> list[Move]:
+        '''Получение списка ходов'''
+        moves_list = self.__get_required_moves_list(side)
+        if not (moves_list):
+            moves_list = self.__get_optional_moves_list(side)
+        return moves_list
+
+    def __get_required_moves_list(self, side: SideType) -> list[Move]:
+        '''Получение списка обязательных ходов'''
+        moves_list = []
+
+        # Определение типов шашек
+        if (side == SideType.WHITE):
+            friendly_checkers = WHITE_CHECKERS
+            enemy_checkers = BLACK_CHECKERS
+        elif (side == SideType.BLACK):
+            friendly_checkers = BLACK_CHECKERS
+            enemy_checkers = WHITE_CHECKERS
+        else: 
+            return moves_list
+
+        for y in range(self.__field.y_size):
+            for x in range(self.__field.x_size):
+
+                # Для обычной шашки
+                if (self.__field.receiving_type_checker(x, y) == friendly_checkers[0]):
+                    for offset in MOVE_OFFSETS:
+                        if not(self.__field.is_within(x + offset.x * 2, y + offset.y * 2)): 
+                            continue
+
+                        if self.__field.receiving_type_checker(x + offset.x, y + offset.y) in enemy_checkers and self.__field.receiving_type_checker(x + offset.x * 2, y + offset.y * 2) == CheckerType.NONE:
+                            moves_list.append(Move(x, y, x + offset.x * 2, y + offset.y * 2))
+
+                # Для дамки
+                elif (self.__field.receiving_type_checker(x, y) == friendly_checkers[1]):
+                    for offset in MOVE_OFFSETS:
+                        if not(self.__field.is_within(x + offset.x * 2, y + offset.y * 2)): 
+                            continue
+
+                        has_enemy_checker_on_way = False
+
+                        for shift in range(1, self.__field.size):
+                            if not(self.__field.is_within(x + offset.x * shift, y + offset.y * shift)): 
+                                continue
+
+                            # Если на пути не было вражеской шашки
+                            if (not has_enemy_checker_on_way):
+                                if (self.__field.receiving_type_checker(x + offset.x * shift, y + offset.y * shift) in enemy_checkers):
+                                    has_enemy_checker_on_way = True
+                                    continue
+                                # Если на пути союзная шашка - то закончить цикл
+                                elif (self.__field.receiving_type_checker(x + offset.x * shift, y + offset.y * shift) in friendly_checkers):
+                                    break
+                            
+                            # Если на пути была вражеская шашка
+                            if (has_enemy_checker_on_way):
+                                if (self.__field.receiving_type_checker(x + offset.x * shift, y + offset.y * shift) == CheckerType.NONE):
+                                    moves_list.append(Move(x, y, x + offset.x * shift, y + offset.y * shift))
+                                else:
+                                    break
+                            
+        return moves_list
+
+    def __get_optional_moves_list(self, side: SideType) -> list[Move]:
+        '''Получение списка необязательных ходов'''
+        moves_list = []
+
+        # Определение типов шашек
+        if (side == SideType.WHITE):
+            friendly_checkers = WHITE_CHECKERS
+        elif (side == SideType.BLACK):
+            friendly_checkers = BLACK_CHECKERS
+        else: 
+            return moves_list
+
+        for y in range(self.__field.y_size):
+            for x in range(self.__field.x_size):
+                # Для обычной шашки
+                if (self.__field.receiving_type_checker(x, y) == friendly_checkers[0]):
+                    for offset in MOVE_OFFSETS[:2] if side == SideType.WHITE else MOVE_OFFSETS[2:]:
+                        if not(self.__field.is_within(x + offset.x, y + offset.y)): 
+                            continue
+
+                        if (self.__field.receiving_type_checker(x + offset.x, y + offset.y) == CheckerType.NONE):
+                            moves_list.append(Move(x, y, x + offset.x, y + offset.y))
+
+                # Для дамки
+                elif (self.__field.receiving_type_checker(x, y) == friendly_checkers[1]):
+                    for offset in MOVE_OFFSETS:
+                        if not(self.__field.is_within(x + offset.x, y + offset.y)): 
+                            continue
+
+                        for shift in range(1, self.__field.size):
+                            if not(self.__field.is_within(x + offset.x * shift, y + offset.y * shift)): 
+                                continue
+
+                            if (self.__field.receiving_type_checker(x + offset.x * shift, y + offset.y * shift) == CheckerType.NONE):
+                                moves_list.append(Move(x, y, x + offset.x * shift, y + offset.y * shift))
+                            else:
+                                break
+        return moves_list
