@@ -1,7 +1,6 @@
-from checkers.enums import CheckerType
+from checkers.enums import CheckerType, SideType
 from checkers.checker import Checker
-from checkers.constants import WHITE_CHECKERS, BLACK_CHECKERS
-from checkers.point import Point
+from checkers.constants import WHITE_CHECKERS, BLACK_CHECKERS, PLAYER_SIDE
 from functools import reduce
 
 class Field:
@@ -39,10 +38,16 @@ class Field:
         for y in range(self.y_size):
             for x in range(self.x_size):
                 if ((y + x) % 2):
-                    if (y < 3):
-                        self.__checkers[y][x].change_type(CheckerType.BLACK_REGULAR)
-                    elif (y >= self.y_size - 3):
-                        self.__checkers[y][x].change_type(CheckerType.WHITE_REGULAR)
+                    if PLAYER_SIDE == SideType.BLACK:
+                        if (y < 3):
+                            self.__checkers[y][x].change_type(CheckerType.WHITE_REGULAR)
+                        elif (y >= self.y_size - 3):
+                            self.__checkers[y][x].change_type(CheckerType.BLACK_REGULAR)
+                    elif PLAYER_SIDE == SideType.WHITE:
+                        if (y < 3):
+                            self.__checkers[y][x].change_type(CheckerType.BLACK_REGULAR)
+                        elif (y >= self.y_size - 3):
+                            self.__checkers[y][x].change_type(CheckerType.WHITE_REGULAR)
 
     def receiving_type_checker(self, x: int, y: int) -> CheckerType:
         '''Получение типа шашки на поле по координатам'''

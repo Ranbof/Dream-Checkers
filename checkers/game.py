@@ -140,10 +140,16 @@ class Game:
             self.__animate_move(move)
 
         # Изменение типа шашки, если она дошла до края
-        if (move.to_y == 0 and self.__field.receiving_type_checker(move.from_x, move.from_y) == CheckerType.WHITE_REGULAR):
-            self.__field.receiving_checker(move.from_x, move.from_y).change_type(CheckerType.WHITE_QUEEN)
-        elif (move.to_y == self.__field.y_size - 1 and self.__field.receiving_type_checker(move.from_x, move.from_y) == CheckerType.BLACK_REGULAR):
-            self.__field.receiving_checker(move.from_x, move.from_y).change_type(CheckerType.BLACK_QUEEN)
+        if PLAYER_SIDE == SideType.WHITE:
+            if (move.to_y == 0 and self.__field.receiving_type_checker(move.from_x, move.from_y) == CheckerType.WHITE_REGULAR):
+                self.__field.receiving_checker(move.from_x, move.from_y).change_type(CheckerType.WHITE_QUEEN)
+            elif (move.to_y == self.__field.y_size - 1 and self.__field.receiving_type_checker(move.from_x, move.from_y) == CheckerType.BLACK_REGULAR):
+                self.__field.receiving_checker(move.from_x, move.from_y).change_type(CheckerType.BLACK_QUEEN)
+        elif PLAYER_SIDE == SideType.BLACK:
+            if (move.to_y == 0 and self.__field.receiving_type_checker(move.from_x, move.from_y) == CheckerType.BLACK_REGULAR):
+                self.__field.receiving_checker(move.from_x, move.from_y).change_type(CheckerType.BLACK_QUEEN)
+            elif (move.to_y == self.__field.y_size - 1 and self.__field.receiving_type_checker(move.from_x, move.from_y) == CheckerType.WHITE_REGULAR):
+                self.__field.receiving_checker(move.from_x, move.from_y).change_type(CheckerType.WHITE_QUEEN)
 
         # Изменение позиции шашки
         self.__field.receiving_checker(move.to_x, move.to_y).change_type(self.__field.receiving_type_checker(move.from_x, move.from_y))
@@ -366,7 +372,14 @@ class Game:
         for y in range(self.__field.y_size):
             for x in range(self.__field.x_size):
                 # Для обычной шашки
-                if (self.__field.receiving_type_checker(x, y) == friendly_checkers[0]):
+                if (self.__field.receiving_type_checker(x, y) == friendly_checkers[0]) and PLAYER_SIDE == SideType.BLACK:
+                    for offset in MOVE_OFFSETS[:2] if side == SideType.BLACK else MOVE_OFFSETS[2:]:
+                        if not(self.__field.is_within(x + offset.x, y + offset.y)): 
+                            continue
+
+                        if (self.__field.receiving_type_checker(x + offset.x, y + offset.y) == CheckerType.NONE):
+                            moves_list.append(Move(x, y, x + offset.x, y + offset.y))
+                elif (self.__field.receiving_type_checker(x, y) == friendly_checkers[0]) and PLAYER_SIDE == SideType.WHITE:
                     for offset in MOVE_OFFSETS[:2] if side == SideType.WHITE else MOVE_OFFSETS[2:]:
                         if not(self.__field.is_within(x + offset.x, y + offset.y)): 
                             continue
