@@ -5,15 +5,17 @@ from pathlib import Path
 from time import sleep
 from math import inf
 
+
 from checkers.field import Field
 from checkers.move import Move
 from checkers.constants import *
 from checkers.enums import CheckerType, SideType
 
 class Game:
-    def __init__(self, canvas: Canvas, x_field_size: int, y_field_size: int):
+    def __init__(self, canvas: Canvas, x_field_size: int, y_field_size: int, player_side):
         self.__canvas = canvas
-        self.__field = Field(x_field_size, y_field_size)
+        self.player_side = player_side
+        self.__field = Field(x_field_size, y_field_size, player_side)
 
         self.__player_turn = True
 
@@ -25,7 +27,7 @@ class Game:
         
         self.__draw_game_pitch()
 
-        if (PLAYER_SIDE == SideType.BLACK):
+        if (self.player_side == SideType.BLACK):
             self.__handle_enemy_turn()
 
     def __init_images(self):
@@ -78,7 +80,7 @@ class Game:
 
                 # Отрисовка возможных точек перемещения, если есть выбранная ячейка
                 if (self.__selected_cell):
-                    player_moves_list = self.__get_moves_list(PLAYER_SIDE)
+                    player_moves_list = self.__get_moves_list(self.player_side)
                     for move in player_moves_list:
                         if (self.__selected_cell.x == move.from_x and self.__selected_cell.y == move.from_y):
                             self.__canvas.create_oval(move.to_x * CELL_SIZE + CELL_SIZE / 3, move.to_y * CELL_SIZE + CELL_SIZE / 3, move.to_x * CELL_SIZE + (CELL_SIZE - CELL_SIZE / 3), move.to_y * CELL_SIZE + (CELL_SIZE - CELL_SIZE / 3), fill=POSIBLE_MOVE_CIRCLE_COLOR, width=0, tag='posible_move_circle' )
@@ -112,9 +114,9 @@ class Game:
         if not(self.__field.is_within(x, y)): 
             return
 
-        if (PLAYER_SIDE == SideType.WHITE):
+        if (self.player_side == SideType.WHITE):
             player_checkers = WHITE_CHECKERS
-        elif (PLAYER_SIDE == SideType.BLACK):
+        elif (self.player_side == SideType.BLACK):
             player_checkers = BLACK_CHECKERS
         else: 
             return
@@ -127,7 +129,7 @@ class Game:
             move = Move(self.__selected_cell.x, self.__selected_cell.y, x, y)
 
             # Если нажатие по ячейке, на которую можно походить
-            if (move in self.__get_moves_list(PLAYER_SIDE)):
+            if (move in self.__get_moves_list(self.player_side)):
                 self.__handle_player_turn(move)
 
                 # Если не ход игрока, то ход противника
@@ -140,12 +142,12 @@ class Game:
             self.__animate_move(move)
 
         # Изменение типа шашки, если она дошла до края
-        if PLAYER_SIDE == SideType.WHITE:
+        if self.player_side == SideType.WHITE:
             if (move.to_y == 0 and self.__field.receiving_type_checker(move.from_x, move.from_y) == CheckerType.WHITE_REGULAR):
                 self.__field.receiving_checker(move.from_x, move.from_y).change_type(CheckerType.WHITE_QUEEN)
             elif (move.to_y == self.__field.y_size - 1 and self.__field.receiving_type_checker(move.from_x, move.from_y) == CheckerType.BLACK_REGULAR):
                 self.__field.receiving_checker(move.from_x, move.from_y).change_type(CheckerType.BLACK_QUEEN)
-        elif PLAYER_SIDE == SideType.BLACK:
+        elif self.player_side == SideType.BLACK:
             if (move.to_y == 0 and self.__field.receiving_type_checker(move.from_x, move.from_y) == CheckerType.BLACK_REGULAR):
                 self.__field.receiving_checker(move.from_x, move.from_y).change_type(CheckerType.BLACK_QUEEN)
             elif (move.to_y == self.__field.y_size - 1 and self.__field.receiving_type_checker(move.from_x, move.from_y) == CheckerType.WHITE_REGULAR):
@@ -181,7 +183,7 @@ class Game:
         # Была ли убита шашка
         has_killed_checker = self.__make_move(move)
 
-        required_moves_list = list(filter(lambda required_move: move.to_x == required_move.from_x and move.to_y == required_move.from_y, self.__get_required_moves_list(PLAYER_SIDE)))
+        required_moves_list = list(filter(lambda required_move: move.to_x == required_move.from_x and move.to_y == required_move.from_y, self.__get_required_moves_list(self.player_side)))
         
         # Если есть ещё ход этой же шашкой
         if (has_killed_checker and required_moves_list):
@@ -193,7 +195,7 @@ class Game:
         '''Обработка хода противника (компьютера)'''
         self.__player_turn = False
 
-        optimal_moves_list = self.__predict_optimal_moves(SideType.opposite(PLAYER_SIDE))
+        optimal_moves_list = self.__predict_optimal_moves(SideType.opposite(self.player_side))
 
         for move in optimal_moves_list:
             self.__make_move(move)
@@ -220,7 +222,7 @@ class Game:
         
         if (game_over):
             # Новая игра
-            self.__init__(self.__canvas, self.__field.x_size, self.__field.y_size)
+            self.__init__(self.__canvas, self.__field.x_size, self.__field.y_size, self.player_side)
 
     def __predict_optimal_moves(self, side: SideType) -> list[Move]:
         '''Предсказать оптимальный ход'''
@@ -372,14 +374,14 @@ class Game:
         for y in range(self.__field.y_size):
             for x in range(self.__field.x_size):
                 # Для обычной шашки
-                if (self.__field.receiving_type_checker(x, y) == friendly_checkers[0]) and PLAYER_SIDE == SideType.BLACK:
+                if (self.__field.receiving_type_checker(x, y) == friendly_checkers[0]) and self.player_side == SideType.BLACK:
                     for offset in MOVE_OFFSETS[:2] if side == SideType.BLACK else MOVE_OFFSETS[2:]:
                         if not(self.__field.is_within(x + offset.x, y + offset.y)): 
                             continue
 
                         if (self.__field.receiving_type_checker(x + offset.x, y + offset.y) == CheckerType.NONE):
                             moves_list.append(Move(x, y, x + offset.x, y + offset.y))
-                elif (self.__field.receiving_type_checker(x, y) == friendly_checkers[0]) and PLAYER_SIDE == SideType.WHITE:
+                elif (self.__field.receiving_type_checker(x, y) == friendly_checkers[0]) and self.player_side == SideType.WHITE:
                     for offset in MOVE_OFFSETS[:2] if side == SideType.WHITE else MOVE_OFFSETS[2:]:
                         if not(self.__field.is_within(x + offset.x, y + offset.y)): 
                             continue

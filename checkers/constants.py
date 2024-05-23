@@ -1,9 +1,6 @@
 from checkers.enums import CheckerType, SideType
 from checkers.point import Point
 
-# Сторона за которую играет игрок
-PLAYER_SIDE = SideType.WHITE
-
 # Размер поля
 X_SIZE = Y_SIZE = 8
 

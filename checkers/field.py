@@ -1,12 +1,13 @@
 from checkers.enums import CheckerType, SideType
 from checkers.checker import Checker
-from checkers.constants import WHITE_CHECKERS, BLACK_CHECKERS, PLAYER_SIDE
+from checkers.constants import *
 from functools import reduce
 
 class Field:
-    def __init__(self, x_size: int, y_size: int):
+    def __init__(self, x_size: int, y_size: int, player_side):
         self.__x_size = x_size
         self.__y_size = y_size
+        self.player_side = player_side
         self.__generate()
 
     @property
@@ -24,7 +25,7 @@ class Field:
     @classmethod
     def copy(cls, field_instance):
         '''Создаёт копию поля из образца'''
-        field_copy = cls(field_instance.x_size, field_instance.y_size)
+        field_copy = cls(field_instance.x_size, field_instance.y_size, field_instance.player_side)
 
         for y in range(field_instance.y_size):
             for x in range(field_instance.x_size):
@@ -38,16 +39,20 @@ class Field:
         for y in range(self.y_size):
             for x in range(self.x_size):
                 if ((y + x) % 2):
-                    if PLAYER_SIDE == SideType.BLACK:
+                    if self.player_side == SideType.BLACK:
                         if (y < 3):
                             self.__checkers[y][x].change_type(CheckerType.WHITE_REGULAR)
                         elif (y >= self.y_size - 3):
                             self.__checkers[y][x].change_type(CheckerType.BLACK_REGULAR)
-                    elif PLAYER_SIDE == SideType.WHITE:
+                    elif self.player_side == SideType.WHITE:
                         if (y < 3):
                             self.__checkers[y][x].change_type(CheckerType.BLACK_REGULAR)
                         elif (y >= self.y_size - 3):
                             self.__checkers[y][x].change_type(CheckerType.WHITE_REGULAR)
+
+                        
+
+
 
     def receiving_type_checker(self, x: int, y: int) -> CheckerType:
         '''Получение типа шашки на поле по координатам'''
