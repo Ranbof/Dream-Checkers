@@ -257,7 +257,7 @@ class Game:
         if (optimal_moves):
             # Фильтрация хода
             for move in choice(optimal_moves):
-                if   (side == SideType.WHITE and self.__field.receiving_type_checker(move.from_x, move.from_y) in BLACK_CHECKERS): 
+                if (side == SideType.WHITE and self.__field.receiving_type_checker(move.from_x, move.from_y) in BLACK_CHECKERS): 
                     break
                 elif (side == SideType.BLACK and self.__field.receiving_type_checker(move.from_x, move.from_y) in WHITE_CHECKERS): 
                     break
