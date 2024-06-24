@@ -4,10 +4,12 @@ from checkers.constants import *
 from functools import reduce
 
 class Field:
-    def __init__(self, x_size: int, y_size: int, player_side):
+    def __init__(self, x_size: int, y_size: int, player_side, other_player_side = None, num_move_prediction = 0):
         self.__x_size = x_size
         self.__y_size = y_size
         self.player_side = player_side
+        self.other_player_side = other_player_side
+        self.num_move_prediction = num_move_prediction
         self.__generate()
 
     @property

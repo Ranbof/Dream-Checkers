@@ -13,8 +13,18 @@ class CheckersApp:
         self.root.title("Шашки") 
         self.root.iconphoto(False, PhotoImage(file = 'icon.png')) 
         self.root.configure(bg = MENU_COLOR)
+
         self.player_side = None
         self.other_player_side = None
+
+
+        self.num_move_prediction = 4 # Количество ходов для предсказания:
+        # Легкий уровень сложности для начинающих (Максимум: 2)
+        # Для комфортной игры (Максимум: 4)
+        # Для большой сложности (Максимум: 6)
+
+
+        self.user_vs_user_mode = False
 
         self.play_image = tk.PhotoImage(file = "play_button.png") 
         self.option_image = tk.PhotoImage(file = "option_button.png") 
@@ -25,7 +35,8 @@ class CheckersApp:
         self.settings_image = tk.PhotoImage(file = "settings.png")
 
         self.main_canvas = None 
-        self.game = None 
+        self.game = None
+
         self.restart_button = None 
         self.go_back_to_menu_button = None
         self.replace_side_button = None
@@ -35,8 +46,10 @@ class CheckersApp:
         self.close_settings_button = None
         self.mode_button = None
         self.music_button = None
+
         self.difficulty_label = None
         self.difficulty_entry = None
+
         self.playlist_label = None
         self.playlist_combobox = None
         self.music_on = False
@@ -49,8 +62,12 @@ class CheckersApp:
     def start_game(self): 
         self.clear_canvas() 
         self.main_canvas = Canvas(self.root, width = CELL_SIZE * X_SIZE, height = CELL_SIZE * Y_SIZE) 
-        self.main_canvas.pack(expand = True) 
-        self.game = Game(self.main_canvas, X_SIZE, Y_SIZE, self.player_side) 
+        self.main_canvas.pack(expand = True)
+        
+        if self.user_vs_user_mode:
+            self.game = Game(self.main_canvas, X_SIZE, Y_SIZE, self.player_side, self.other_player_side, self.num_move_prediction)
+        else:
+            self.game = Game(self.main_canvas, X_SIZE, Y_SIZE, self.player_side, None, self.num_move_prediction)
 
         self.restart_button = tk.Button(self.root, text = "Restart", command = self.restart_game) 
         self.restart_button.place(relx = 0.06, rely = 0.45, anchor = tk.CENTER) 
@@ -94,16 +111,32 @@ class CheckersApp:
         self.black_button.place(relx = 0.65, rely = 0.45, anchor = tk.CENTER)
 
     def select_color_game_white(self):
-        self.player_side = SideType.WHITE
-        self.other_player_side = SideType.BLACK
+        if self.user_vs_user_mode:
+            self.player_side = SideType.WHITE
+            self.other_player_side = SideType.BLACK
+        else:
+            self.player_side = SideType.WHITE
+            self.other_player_side = None
         self.clear_color_buttons()
         self.start_game()
         
     def select_color_game_black(self):
-        self.player_side = SideType.BLACK
-        self.other_player_side = SideType.WHITE
+        if self.user_vs_user_mode:
+            self.player_side = SideType.BLACK
+            self.other_player_side = SideType.WHITE
+        else:
+            self.player_side = SideType.BLACK
+            self.other_player_side = None
         self.clear_color_buttons()
-        self.start_game() 
+        self.start_game()
+
+    def start_player_vs_player(self):
+        self.user_vs_user_mode = True
+        self.choose_color_button()
+
+    def start_player_vs_ai(self):
+        self.user_vs_user_mode = False
+        self.choose_color_button()
     
     def move_to_option(self):
         self.clear_canvas()
@@ -182,13 +215,6 @@ class CheckersApp:
 
         self.exit_button = tk.Button(self.frame, image = self.exit_image, command = self.exit_game, borderwidth = 0, bg = MENU_COLOR, activebackground = MENU_COLOR)
         self.exit_button.grid(row = 3, column = 0, pady = 10)
-
-    def start_player_vs_player(self):
-        self.choose_color_button()
-
-    def start_player_vs_ai(self):
-        print("Денис, это уже твоя часть")
-        self.choose_color_button()
 
     def clear_canvas(self): 
         widgets = [

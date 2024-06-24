@@ -12,12 +12,21 @@ from checkers.constants import *
 from checkers.enums import CheckerType, SideType
 
 class Game:
-    def __init__(self, canvas: Canvas, x_field_size: int, y_field_size: int, player_side):
+    def __init__(self, canvas: Canvas, x_field_size: int, y_field_size: int, player_side, other_player_side = None, num_move_prediction = 0):
         self.__canvas = canvas
         self.player_side = player_side
-        self.__field = Field(x_field_size, y_field_size, player_side)
+        self.other_player_side = other_player_side
+        
+        self.num_move_prediction = num_move_prediction
+
+        if self.other_player_side != None:
+            self.__field = Field(x_field_size, y_field_size, player_side, other_player_side, num_move_prediction)
+        else:
+            self.__field = Field(x_field_size, y_field_size, player_side, None, num_move_prediction)
 
         self.__player_turn = True
+        self.__other_player_turn = False
+        self.possible_turn = True
 
         self.__hovered_cell = Point()
         self.__selected_cell = Point()
@@ -27,8 +36,13 @@ class Game:
         
         self.__draw_game_pitch()
 
-        if (self.player_side == SideType.BLACK):
-            self.__handle_enemy_turn()
+        if self.other_player_side != None:
+            if (self.player_side == SideType.BLACK):
+                self.__player_turn = False
+                self.__other_player_turn = True
+        else:
+            if (self.player_side == SideType.BLACK):
+                self.__handle_enemy_turn()
 
     def __init_images(self):
         '''Инициализация изображений'''
@@ -83,7 +97,14 @@ class Game:
                     player_moves_list = self.__get_moves_list(self.player_side)
                     for move in player_moves_list:
                         if (self.__selected_cell.x == move.from_x and self.__selected_cell.y == move.from_y):
-                            self.__canvas.create_oval(move.to_x * CELL_SIZE + CELL_SIZE / 3, move.to_y * CELL_SIZE + CELL_SIZE / 3, move.to_x * CELL_SIZE + (CELL_SIZE - CELL_SIZE / 3), move.to_y * CELL_SIZE + (CELL_SIZE - CELL_SIZE / 3), fill=POSIBLE_MOVE_CIRCLE_COLOR, width=0, tag='posible_move_circle' )
+                            self.__canvas.create_oval(move.to_x * CELL_SIZE + CELL_SIZE / 3, move.to_y * CELL_SIZE + CELL_SIZE / 3, move.to_x * CELL_SIZE + (CELL_SIZE - CELL_SIZE / 3), move.to_y * CELL_SIZE + (CELL_SIZE - CELL_SIZE / 3), fill=POSIBLE_MOVE_CIRCLE_COLOR, width=0, tag='posible_move_circle')
+                
+                if self.other_player_side != None:
+                    if (self.__selected_cell):
+                        other_player_moves_list = self.__get_moves_list(self.other_player_side)
+                        for move in other_player_moves_list:
+                            if (self.__selected_cell.x == move.from_x and self.__selected_cell.y == move.from_y):
+                                self.__canvas.create_oval(move.to_x * CELL_SIZE + CELL_SIZE / 3, move.to_y * CELL_SIZE + CELL_SIZE / 3, move.to_x * CELL_SIZE + (CELL_SIZE - CELL_SIZE / 3), move.to_y * CELL_SIZE + (CELL_SIZE - CELL_SIZE / 3), fill=POSIBLE_MOVE_CIRCLE_COLOR, width=0, tag='posible_move_circle')
 
     def __draw_checkers(self):
         '''Отрисовка шашек'''
@@ -105,8 +126,11 @@ class Game:
 
     def mouse_down(self, event: Event):
         '''Событие нажатия мышки'''
-        if not(self.__player_turn): 
-            return
+        if self.other_player_side != None:
+            pass
+        else:
+            if not(self.__player_turn): 
+                return
 
         x, y = (event.x) // CELL_SIZE, (event.y) // CELL_SIZE
 
@@ -120,21 +144,59 @@ class Game:
             player_checkers = BLACK_CHECKERS
         else: 
             return
+        
+        if self.other_player_side != None:
+            if (self.other_player_side == SideType.WHITE):
+                other_player_checkers = WHITE_CHECKERS
+            elif (self.other_player_side == SideType.BLACK):
+                other_player_checkers = BLACK_CHECKERS
+            else: 
+                return
+        
+        if self.other_player_side != None:
+            # Если нажатие по шашке игрока, то выбрать её
+            if (self.__field.receiving_type_checker(x, y) in player_checkers) and (self.__player_turn):
+                self.__selected_cell = Point(x, y)
+                self.__draw_game_pitch()
+            elif (self.__player_turn):
+                move = Move(self.__selected_cell.x, self.__selected_cell.y, x, y)
 
-        # Если нажатие по шашке игрока, то выбрать её
-        if (self.__field.receiving_type_checker(x, y) in player_checkers):
-            self.__selected_cell = Point(x, y)
-            self.__draw_game_pitch()
-        elif (self.__player_turn):
-            move = Move(self.__selected_cell.x, self.__selected_cell.y, x, y)
+                # Если нажатие по ячейке, на которую можно походить
+                if (move in self.__get_moves_list(self.player_side)):
+                    self.__handle_player_turn(move)
+                    if not(self.possible_turn):
+                        self.__player_turn = False
+                        self.__other_player_turn = True
+                        self.__check_for_game_over()
 
-            # Если нажатие по ячейке, на которую можно походить
-            if (move in self.__get_moves_list(self.player_side)):
-                self.__handle_player_turn(move)
+            if (self.__field.receiving_type_checker(x, y) in other_player_checkers) and (self.__other_player_turn):
+                self.__selected_cell = Point(x, y)
+                self.__draw_game_pitch()
+            elif (self.__other_player_turn):
+                other_move = Move(self.__selected_cell.x, self.__selected_cell.y, x, y)
 
-                # Если не ход игрока, то ход противника
-                if not (self.__player_turn):
-                    self.__handle_enemy_turn()
+                # Если нажатие по ячейке, на которую можно походить
+                if (other_move in self.__get_moves_list(self.other_player_side)):
+                    self.__handle_other_player_turn(other_move)
+                    if not(self.possible_turn):
+                        self.__other_player_turn = False
+                        self.__player_turn = True
+                        self.__check_for_game_over()
+        else:
+            # Если нажатие по шашке игрока, то выбрать её
+            if (self.__field.receiving_type_checker(x, y) in player_checkers):
+                self.__selected_cell = Point(x, y)
+                self.__draw_game_pitch()
+            elif (self.__player_turn):
+                move = Move(self.__selected_cell.x, self.__selected_cell.y, x, y)
+
+                # Если нажатие по ячейке, на которую можно походить
+                if (move in self.__get_moves_list(self.player_side)):
+                    self.__handle_player_turn(move)
+
+                    # Если не ход игрока, то ход противника
+                    if not (self.__player_turn):
+                        self.__handle_enemy_turn()
 
     def __make_move(self, move: Move, draw: bool = True):
         '''Совершение хода'''
@@ -152,6 +214,19 @@ class Game:
                 self.__field.receiving_checker(move.from_x, move.from_y).change_type(CheckerType.BLACK_QUEEN)
             elif (move.to_y == self.__field.y_size - 1 and self.__field.receiving_type_checker(move.from_x, move.from_y) == CheckerType.WHITE_REGULAR):
                 self.__field.receiving_checker(move.from_x, move.from_y).change_type(CheckerType.WHITE_QUEEN)
+
+        if self.other_player_side != None:
+            # Изменение типа шашки, если она дошла до края
+            if self.other_player_side == SideType.WHITE:
+                if (move.to_y == 0 and self.__field.receiving_type_checker(move.from_x, move.from_y) == CheckerType.WHITE_REGULAR):
+                    self.__field.receiving_checker(move.from_x, move.from_y).change_type(CheckerType.WHITE_QUEEN)
+                elif (move.to_y == self.__field.y_size - 1 and self.__field.receiving_type_checker(move.from_x, move.from_y) == CheckerType.BLACK_REGULAR):
+                    self.__field.receiving_checker(move.from_x, move.from_y).change_type(CheckerType.BLACK_QUEEN)
+            elif self.other_player_side == SideType.BLACK:
+                if (move.to_y == 0 and self.__field.receiving_type_checker(move.from_x, move.from_y) == CheckerType.BLACK_REGULAR):
+                    self.__field.receiving_checker(move.from_x, move.from_y).change_type(CheckerType.BLACK_QUEEN)
+                elif (move.to_y == self.__field.y_size - 1 and self.__field.receiving_type_checker(move.from_x, move.from_y) == CheckerType.WHITE_REGULAR):
+                    self.__field.receiving_checker(move.from_x, move.from_y).change_type(CheckerType.WHITE_QUEEN)
 
         # Изменение позиции шашки
         self.__field.receiving_checker(move.to_x, move.to_y).change_type(self.__field.receiving_type_checker(move.from_x, move.from_y))
@@ -179,15 +254,42 @@ class Game:
     def __handle_player_turn(self, move: Move):
         '''Обработка хода игрока'''
         self.__player_turn = False
+        if self.other_player_side != None:
+            self.possible_turn = True
 
         # Была ли убита шашка
         has_killed_checker = self.__make_move(move)
 
         required_moves_list = list(filter(lambda required_move: move.to_x == required_move.from_x and move.to_y == required_move.from_y, self.__get_required_moves_list(self.player_side)))
         
+        if self.other_player_side != None:
+            # Если есть ещё ход этой же шашкой
+            if (has_killed_checker and required_moves_list):
+                self.__player_turn = True
+            else:
+                self.possible_turn = False
+        else:
+            # Если есть ещё ход этой же шашкой
+            if (has_killed_checker and required_moves_list):
+                self.__player_turn = True
+
+        self.__selected_cell = Point()
+    
+    def __handle_other_player_turn(self, move: Move):
+        '''Обработка хода игрока 2'''
+        self.__other_player_turn = True
+        self.possible_turn = True
+
+        # Была ли убита шашка
+        has_killed_checker = self.__make_move(move)
+
+        required_moves_list = list(filter(lambda required_move: move.to_x == required_move.from_x and move.to_y == required_move.from_y, self.__get_required_moves_list(self.other_player_side)))
+        
         # Если есть ещё ход этой же шашкой
         if (has_killed_checker and required_moves_list):
-            self.__player_turn = True
+            self.__other_player_turn = True
+        else:
+            self.possible_turn = False
 
         self.__selected_cell = Point()
 
@@ -279,7 +381,7 @@ class Game:
         else:
             moves_list = self.__get_moves_list(side)
 
-        if (moves_list and current_prediction_depth < NUM_MOVE_PREDICTION):
+        if (moves_list and current_prediction_depth < self.num_move_prediction):
             field_copy = Field.copy(self.__field)
             for move in moves_list:
                 has_killed_checker = self.__make_move(move, draw = False)
