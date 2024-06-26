@@ -19,6 +19,7 @@ class Game:
         
         self.num_move_prediction = num_move_prediction
 
+        # Поле взависимости от режима игры
         if self.other_player_side != None:
             self.__field = Field(x_field_size, y_field_size, player_side, other_player_side, num_move_prediction)
         else:
@@ -47,10 +48,10 @@ class Game:
     def __init_images(self):
         '''Инициализация изображений'''
         self.__images = {
-            CheckerType.WHITE_REGULAR: ImageTk.PhotoImage(Image.open(Path('assets', 'white-regular.png')).resize((CELL_SIZE, CELL_SIZE))),
-            CheckerType.BLACK_REGULAR: ImageTk.PhotoImage(Image.open(Path('assets', 'black-regular.png')).resize((CELL_SIZE, CELL_SIZE))),
-            CheckerType.WHITE_QUEEN: ImageTk.PhotoImage(Image.open(Path('assets', 'white-queen.png')).resize((CELL_SIZE, CELL_SIZE))),
-            CheckerType.BLACK_QUEEN: ImageTk.PhotoImage(Image.open(Path('assets', 'black-queen.png')).resize((CELL_SIZE, CELL_SIZE))),
+            CheckerType.WHITE_REGULAR: ImageTk.PhotoImage(Image.open(Path('images', 'white-regular.png')).resize((CELL_SIZE, CELL_SIZE))),
+            CheckerType.BLACK_REGULAR: ImageTk.PhotoImage(Image.open(Path('images', 'black-regular.png')).resize((CELL_SIZE, CELL_SIZE))),
+            CheckerType.WHITE_QUEEN: ImageTk.PhotoImage(Image.open(Path('images', 'white-queen.png')).resize((CELL_SIZE, CELL_SIZE))),
+            CheckerType.BLACK_QUEEN: ImageTk.PhotoImage(Image.open(Path('images', 'black-queen.png')).resize((CELL_SIZE, CELL_SIZE))),
         }
 
     def __animate_move(self, move: Move):
@@ -175,7 +176,7 @@ class Game:
             elif (self.__other_player_turn):
                 other_move = Move(self.__selected_cell.x, self.__selected_cell.y, x, y)
 
-                # Если нажатие по ячейке, на которую можно походить
+                # Если нажатие по ячейке, на которую можно походить(переход хода к противнику)
                 if (other_move in self.__get_moves_list(self.other_player_side)):
                     self.__handle_other_player_turn(other_move)
                     if not(self.possible_turn):

@@ -1,6 +1,7 @@
 from checkers.enums import CheckerType, SideType
 from checkers.point import Point
 
+
 # Размер поля
 X_SIZE = Y_SIZE = 8
 
